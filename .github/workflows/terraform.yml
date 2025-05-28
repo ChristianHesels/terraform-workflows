@@ -1,0 +1,48 @@
+name: Terraform Deployment
+
+on:
+  workflow_call:
+    inputs:
+      aws_role:
+        required: true
+        type: string
+      run_apply:
+        required: false
+        type: string
+        default: 'false'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws_role }}
+          aws-region: eu-central-1
+          role-session-name: githubactions
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        if: ${{ inputs.run_apply == 'true' }}
+        run: terraform apply -auto-approve tfplan
